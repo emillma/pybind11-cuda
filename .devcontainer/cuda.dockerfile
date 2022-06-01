@@ -41,14 +41,14 @@ RUN pip install \
     pylint autopep8 jupyter \
     sympy 
 
-# RUN pip3 install \
-#     pyserial \
-#     plotly dash\
-#     numba \
-#     opencv-python opencv-contrib-python \
-#     networkx \
-#     dash_bootstrap_components 
+RUN pip3 install \
+    pyserial \
+    plotly dash\
+    numba \
+    opencv-python opencv-contrib-python \
+    networkx \
+    dash_bootstrap_components 
 
-# RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
+RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
 
-# RUN git config --global user.email "emil.martens@gmail.com" && git config --global user.name "Emil Martens"
+RUN git config --global user.email "emil.martens@gmail.com" && git config --global user.name "Emil Martens"

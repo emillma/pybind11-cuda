@@ -7,7 +7,8 @@ from pathlib import Path
 import os
 import signal
 if True:
-    sys.path.append(str(Path(__file__).parent.joinpath('build/src')))
+    sys.path.append(
+        str(Path(__file__).parents[2].joinpath('build/src/cudalib')))
     import gpu_library
 
 

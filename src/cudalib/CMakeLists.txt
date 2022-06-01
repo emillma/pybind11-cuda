@@ -4,7 +4,6 @@ add_library(gpu_library SHARED
 #target_include_directories(gpu_library PUBLIC ${Python3_INCLUDE_DIRS})
 target_include_directories(gpu_library PUBLIC ${CMAKE_SOURCE_DIR}/pybind11/include)
 target_link_libraries(gpu_library PUBLIC
-  #${PYTHON3_PYTHON}
   Python3::Python
   cudart)
 
