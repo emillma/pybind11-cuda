@@ -13,7 +13,7 @@
             "cwd": "${fileDirname}",
             "preLaunchTask": "make",
             "args": [
-                "${workspaceFolder}/test_mul.py"
+                "${file}"
             ],
             "environment": [],
             "externalConsole": false,
@@ -39,7 +39,7 @@
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "preLaunchTask": "make",
-            "args": "${workspaceFolder}/test_mul.py",
+            "args": "${file}",
             "env": {
                 "CUDA_DEBUGGER_SOFTWARE_PREEMPTION": "1"
             },

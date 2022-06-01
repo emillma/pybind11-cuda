@@ -59,6 +59,7 @@ include(protect_pthread_flag)
 #-------------------------------------------------------------------#
 
 add_subdirectory(src/cudalib)
+add_subdirectory(src/crclib)
 
 #-------------------------------------------------------------------#
 # Configuration summary

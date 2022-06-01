@@ -12,12 +12,14 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-vscode-remote.remote-ssh",
+        "ms-vscode.cmake-tools",
         "kevinrose.vsc-python-indent",
         "editorconfig.editorconfig",
         "nvidia.nsight-vscode-edition",
         "mhutchie.git-graph",
         "znck.grammarly",
         "james-yu.latex-workshop",
+        "twxs.cmake"
     ],
     "name": "mycontainer",
     "runArgs": [

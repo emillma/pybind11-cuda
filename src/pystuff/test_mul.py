@@ -7,12 +7,12 @@ from pathlib import Path
 import os
 import signal
 if True:
-    sys.path.append(
-        str(Path(__file__).parents[2].joinpath('build/src/cudalib')))
+    build_dir = Path(__file__).parents[2].joinpath('build')
+    sys.path.append(str(build_dir.joinpath('src/cudalib')))
     import gpu_library
 
 
-size = 100000000
+size = 10000000
 arr1 = np.linspace(1.0, 100.0, size)
 arr2 = np.linspace(1.0, 100.0, size)
 # PID = os.getpid()
@@ -30,5 +30,5 @@ for _ in range(runs):
     arr2 = arr2 * factor
 print("cpu time: {}".format(time.time()-t0))
 
-# print("results match: {}".format(np.allclose(arr1, arr2)))
+print("results match: {}".format(np.allclose(arr1, arr2)))
 # a = 10
