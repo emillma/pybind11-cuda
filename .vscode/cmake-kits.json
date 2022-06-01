@@ -1,0 +1,10 @@
+[
+    {
+        "name": "Cuda",
+        "compilers": {
+            // "C": "/usr/local/cuda-11.4/bin/nvcc",
+            // "CXX": "/usr/local/cuda-11.4/bin/nvcc",
+            "CUDA": "/usr/local/cuda-11.3/bin/nvcc"
+        }
+    }
+]

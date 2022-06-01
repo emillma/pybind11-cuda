@@ -1,0 +1,119 @@
+{
+    "latex-workshop.latex.outDir": "build",
+    "latex-workshop.latex.search.rootFiles.include": [
+        "latex/main.tex"
+    ],
+    "latex-workshop.latex.recipes": [
+        {
+            "name": "latexmk 🔃",
+            "tools": [
+                // "prescript",
+                "latexmk",
+                // "postscript"
+            ]
+        },
+        {
+            "name": "lualatex->biber->lualatex",
+            "tools": [
+                "lualatex",
+                // "biber",
+                // "lualatex"
+            ]
+        }
+    ],
+    "latex-workshop.latex.tools": [
+        {
+            "name": "latexmk",
+            "command": "latexmk",
+            "args": [
+                "-shell-escape",
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-pdflatex=lualatex",
+                "-pdf",
+                "-outdir=%OUTDIR%",
+                "%DOC%"
+            ],
+        },
+        {
+            "name": "lualatex",
+            "command": "lualatex",
+            "args": [
+                "-shell-escape",
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-pdf",
+                "-outdir=%OUTDIR%",
+                "%DOC%"
+            ]
+        },
+        {
+            "name": "biber",
+            "command": "biber",
+            "args": [
+                "%DOCFILE%"
+            ]
+        },
+        {
+            "name": "prescript",
+            "command": "python",
+            "args": [
+                "%DIR%/scripts/prescript.py",
+            ]
+        },
+        {
+            "name": "postscript",
+            "command": "python",
+            "args": [
+                "%DIR%/scripts/postscript.py",
+            ]
+        }
+    ],
+    "cSpell.customDictionaries": {
+        "custom-dictionary-workspace": {
+            "name": "custom-dictionary-workspace",
+            "path": "${workspaceFolder:emillma-sensorrig}/.cspell/custom-dictionary-workspace.txt",
+            "addWords": true,
+            "scope": "workspace"
+        }
+    },
+    "files.associations": {
+        "*.spec": "python",
+        "iostream": "cpp",
+        "stdlib.h": "c",
+        "trigger.pio.h": "c",
+        "spi.h": "c",
+        "header.h": "c",
+        "multicore.h": "c",
+        "optional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "*.tcc": "c",
+        "string": "c",
+        "vector": "c",
+        "string_view": "c",
+        "iomanip": "c",
+        "limits": "c",
+        "sstream": "c",
+        "streambuf": "c",
+        "pio.h": "c"
+    },
+    "cmake.sourceDirectory": "${workspaceFolder}/.",
+    "files.exclude": {
+        "src/pico/pico-sdk": true
+    },
+    "grammarly.selectors": [
+        {
+            "language": "latex",
+            "scheme": "file"
+        }
+    ],
+}

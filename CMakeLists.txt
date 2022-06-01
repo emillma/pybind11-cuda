@@ -43,9 +43,10 @@ if(NOT DEFINED CMAKE_CUDA_STANDARD)
 endif()
 
 # make sure to find python from conda, if a conda virtual env is activated
+set(ython3_EXECUTABLE "/path/to/bin/python3")
 set(Python3_FIND_VIRTUALENV "STANDARD")
 find_package(Python3 COMPONENTS Interpreter Development)
-#find_package(PythonInterp 3.6 REQUIRED)
+find_package(PythonInterp 3.9 REQUIRED)
 #find_package(PythonLibs 3.6 REQUIRED)
 
 # we also need extra stuff to make sure compile flags are correctly

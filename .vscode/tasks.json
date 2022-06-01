@@ -1,0 +1,70 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build devcontainer",
+            "type": "shell",
+            "command": "docker build --tag devcontainer:latest -f ./.devcontainer/${input:container_type}.dockerfile ${workspaceFolder}",
+            "problemMatcher": []
+        },
+        {
+            "label": "build cuda container",
+            "type": "shell",
+            "command": "docker build --tag cudacontainer:latest -f ./.devcontainer/cuda.dockerfile ${workspaceFolder}",
+            "problemMatcher": []
+        },
+        {
+            "label": "open it devcontainer image",
+            "type": "shell",
+            "command": "sudo docker run --rm -it devcontainer:latest bash",
+            "problemMatcher": []
+        },
+        {
+            "label": "create pico build container",
+            "type": "shell",
+            "command": "docker create --name picoflasher ubuntu:latest"
+        },
+        {
+            "label": "GUI server",
+            "type": "shell",
+            "command": "cd src/gui && FLASK_APP=app FLASK_ENV=development flask run --host=0.0.0.0 --port=8050",
+            "problemMatcher": ""
+        },
+        {
+            "label": "fixpio",
+            "type": "shell",
+            "command": "python3 ${workspaceFolder}/src/pico/piofix.py",
+            "options": {
+                "cwd": "${workspaceFolder}/src/pico"
+            },
+            "problemMatcher": "",
+        },
+        {
+            "label": "make",
+            "dependsOn": [],
+            "dependsOrder": "sequence",
+            "type": "shell",
+            "command": "make",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "container_type",
+            "description": "Which type of devcontainer to build:",
+            "default": "pico",
+            "type": "promptString"
+        },
+    ]
+}
