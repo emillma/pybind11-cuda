@@ -24,22 +24,4 @@ __global__ void cuadd(int n, float *x, float *y) {
     int stride = blockDim.x * gridDim.x;
     if (index == 0)
         y[0] = x[0] + y[0];
-    // for (int i = index; i < n; i += stride)
-}
-
-// Simple wrapper function to be exposed to Python
-int pyadd(int N, long px, long py) {
-    float *x = reinterpret_cast<float *>(px);
-    float *y = reinterpret_cast<float *>(py);
-
-    // Run kernel on 1M elements on the GPU
-    int blockSize = 256;
-    int numBlocks = (N + blockSize - 1) / blockSize;
-    cuadd<<<numBlocks, blockSize>>>(N, x, y);
-
-    // Wait for GPU to finish before accessing on host
-    gpuErrchk(cudaPeekAtLastError());
-    gpuErrchk(cudaDeviceSynchronize());
-
-    return 0;
 }

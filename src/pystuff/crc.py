@@ -120,39 +120,3 @@ def timeit(func, *args, times=100):
         func(*args)
     t_final = time.perf_counter()
     return (t_final - t0)/times
-
-
-if __name__ == "__main__":
-    with open(Path(__file__).parent.joinpath('samples/sample.pickle'), 'rb') as file:
-        data = pickle.load(file)
-
-    meas = data[:CRC_IDX] + [0]
-    result = crc32mpeg2(meas)
-    check = int.from_bytes(data[CRC_IDX:CRC_IDX+4], 'big')
-    print(result == check)
-    a = None
-    # data[20] = 32
-
-    result_jit = crc32mpeg2_jited(np.array(meas, np.uint8))
-    print(result_jit == check)
-    print(type(result_jit))
-    data_arr = np.array(data, dtype=np.uint8)
-
-    message = data_arr[:]
-    for name, func in zip(['normal', 'lookup'], [crc32mpeg2, crc32mpeg2_lookup]):
-        print(f"single {name}: {timeit(func, message)}")
-
-    for name, func in zip(['normal', 'lookup'],
-                          [crc32mpeg2_jited, crc32mpeg2_lookup_jited]):
-        print(f"jited single {name}: {timeit(func, message)}")
-
-    # for name, func in zip(['normal', 'lookup'], [crc32mpeg2, crc32mpeg2_lookup]):
-    #     print(f"all {name}: {timeit(check_all, func, data)}")
-
-    # for name, func in zip(['normal', 'lookup'],
-    #                       [crc32mpeg2_jited, crc32mpeg2_lookup_jited]):
-    #     print(f"jited all {name}: {timeit(check_all, func, data_arr)}")
-
-    print(all(check_all_jited(data_arr)),
-          f"double jited all {timeit(check_all_jited, data_arr)}")
-#

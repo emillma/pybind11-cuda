@@ -1,5 +1,7 @@
 add_library(mycrclib SHARED
-  crcfuncs.cu)
+  crc.cu
+  crc_cpp.cpp
+  crc_cuda.cu)
 
 #target_include_directories(gpu_library PUBLIC ${Python3_INCLUDE_DIRS})
 target_include_directories(mycrclib PUBLIC ${CMAKE_SOURCE_DIR}/pybind11/include)
