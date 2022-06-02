@@ -6,10 +6,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "cutest.cu"
+
 namespace py = pybind11;
 
 template <typename T>
-long crc1(py::array_t<T> vec) {
+bool crc1(py::array_t<T> vec) {
     py::buffer_info ha = vec.request();
     if (ha.ndim != 1) {
         throw std::runtime_error("wrong dim");
@@ -19,7 +21,7 @@ long crc1(py::array_t<T> vec) {
     unsigned int poly = 0x04c11db7;
 
     auto r = vec.unchecked();
-    for (py::ssize_t i = 0; i < size; i++) {
+    for (py::ssize_t i = 0; i < size - 4; i++) {
         unsigned int val = static_cast<unsigned int>(r(i)) << 24;
         crc = crc ^ val;
         for (int j = 0; j < 8; j++) {
@@ -30,10 +32,11 @@ long crc1(py::array_t<T> vec) {
             }
         }
     }
-    return crc;
-    // auto output = py::array_t<T>(4);
+    unsigned int check = __builtin_bswap32(*reinterpret_cast<unsigned int *>(&static_cast<T *>(ha.ptr)[1]));
+    return (check == crc);
 }
 
 PYBIND11_MODULE(mycrclib, m) {
     m.def("crc1", crc1<unsigned char>);
+    m.def("pyadd", &pyadd, "A function which adds two numbers");
 }
