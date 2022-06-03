@@ -13,46 +13,45 @@ if True:
     import mycrclib
 
 
-n = 50000000
-np.random.seed(123)
-message = np.random.randint(0, 1, (n,), np.uint8)
+n = 1024*800
+# n = n - n % 32
+# np.random.seed(123)
+message = np.random.randint(0, 256, (n,), np.uint8)
+message[1] = 0
 
+crcfull = pycrc.crc32mpeg2_lookup_jited(message)
+crca = pycrc.crc32mpeg2_lookup_jited(message[:n//2])
+crcb = pycrc.crc32mpeg2_lookup_jited(message[n//2:])
+crc_joined = pycrc.join_lookup(crca, crcb, n//2)
 
-def foo(data):
-    for i in range(1000):
-        a = 1
-    return
-
-
+print(pycrc.gen_table(1024)[2, 2])
 functions = [
-    foo,
     # pycrc.crc32mpeg2,
     # pycrc.crc32mpeg2_lookup,
-    # pycrc.crc32mpeg2_jited,
+    pycrc.crc32mpeg2_jited,
     pycrc.crc32mpeg2_lookup_jited,
     mycrclib.get_crc,
     mycrclib.get_crc_lookup,
-    mycrclib.get_crc_parallel,
-    mycrclib.get_crc_lookup_parallel
+    mycrclib.get_crc_lookup_parallel,
 ]
 
 results = []
 for func in functions:
     output, time = timeit(func, message, times=1)
     name = str(func)
-    print(f"{name: <70}: {output}, {time}")
+    print(f"{name: <80}: {output: <12}, {time}")
     results.append((name, output, time))
 
+d_message = cp.asarray(message)
+functions = [
+    # mycrclib.get_crc_cuda
+]
 
-# for (name, out, t) in results:
-
-# x = cp.ones(1, np.float32)
-# y = cp.ones(1, np.float32)
-
-# nbarray = cuda.to_device(np.ones(3, dtype=np.float32))
-
-
-# a = mycrclib.pyadd(len(x), x.data.ptr, y.data.ptr)
-# a = mycrclib.pyadd(len(x), x.data.ptr,
-#                    nbarray.__cuda_array_interface__['data'][0])
-# print(type(a))
+results = []
+for func in functions:
+    output, time = timeit(func,
+                          d_message.data.ptr, n,
+                          times=1)
+    name = str(func)
+    print(f"{name: <80}: {output}, {time}")
+    results.append((name, output, time))

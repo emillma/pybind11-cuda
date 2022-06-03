@@ -58,7 +58,7 @@ include(protect_pthread_flag)
 # build some Cuda library
 #-------------------------------------------------------------------#
 
-add_subdirectory(src/cudalib)
+# add_subdirectory(src/cudalib)
 add_subdirectory(src/crclib)
 
 #-------------------------------------------------------------------#

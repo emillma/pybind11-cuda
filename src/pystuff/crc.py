@@ -26,7 +26,7 @@ TABLE_ARR = np.array(TABLE, np.uint32)
 
 
 def crc32mpeg2(message: Iterable[int],
-               seed: int = 0xffffffff):
+               seed: int = 0):
     """
     Thanks to https://stackoverflow.com/questions/69332500/how-can-calculate-mpeg2-crc32-in-python
     """
@@ -43,7 +43,7 @@ def crc32mpeg2(message: Iterable[int],
 
 
 @nb.njit
-def crc32mpeg2_jited(message, seed=0xffffffff):
+def crc32mpeg2_jited(message, seed=0):
     """
     Thanks to https://stackoverflow.com/questions/69332500/how-can-calculate-mpeg2-crc32-in-python
     """
@@ -59,24 +59,48 @@ def crc32mpeg2_jited(message, seed=0xffffffff):
     return crc
 
 
-def crc32mpeg2_lookup(message, crc=0xffffffff):
+def crc32mpeg2_lookup(message, crc=0):
     for val in message:
         crc = (0xffffff & crc) << 8 ^ TABLE[val ^ (crc >> 24)]
     return crc
 
 
 @nb.njit
-def crc32mpeg2_lookup_jited(buf, crc=u32(0xffffffff)):
+def crc32mpeg2_lookup_jited(buf, crc=u32(0)):
     for val in buf:
         crc = ((u32(0xffffff) & crc) << u8(8)
                ^ TABLE_ARR[val ^ (crc >> u8(24))])
     return crc
 
 
-def timeit(func, *args, times=100):
-    func(*args)
-    t0 = time.perf_counter()
-    for i in range(times):
-        func(*args)
-    t_final = time.perf_counter()
-    return (t_final - t0)/times
+def extend_flip(bit, dist):
+    crc = 1 << bit
+    flip = crc32mpeg2_lookup_jited(np.zeros(dist, np.uint8), crc)
+    return flip
+
+
+def join(crc1, crc2, dist):
+
+    crc_tmp = crc1
+    crcout = crc2
+    for i in range(32):
+        if crc1 >> i & 1:
+            crcout = crcout ^ extend_flip(i, dist)
+    return crcout
+
+
+def gen_table(dist):
+    table = np.empty((4, 256), np.uint32)
+    for i in range(4):
+        for j in range(256):
+            table[i, j] = crc32mpeg2_lookup_jited(
+                np.zeros(dist, np.uint8), j << i*8)
+    return table
+
+
+def join_lookup(crc1, crc2, dist):
+    crcout = crc2
+    table = gen_table(dist)
+    for i in range(4):
+        crcout ^= table[i, crc1 >> i*8 & 0xff]
+    return crcout
