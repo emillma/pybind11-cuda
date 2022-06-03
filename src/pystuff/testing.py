@@ -13,17 +13,27 @@ if True:
     import mycrclib
 
 
-n = 50000
+n = 50000000
 np.random.seed(123)
 message = np.random.randint(0, 1, (n,), np.uint8)
 
+
+def foo(data):
+    for i in range(1000):
+        a = 1
+    return
+
+
 functions = [
-    pycrc.crc32mpeg2,
-    pycrc.crc32mpeg2_lookup,
-    pycrc.crc32mpeg2_jited,
+    foo,
+    # pycrc.crc32mpeg2,
+    # pycrc.crc32mpeg2_lookup,
+    # pycrc.crc32mpeg2_jited,
     pycrc.crc32mpeg2_lookup_jited,
     mycrclib.get_crc,
-    mycrclib.get_crc_lookup
+    mycrclib.get_crc_lookup,
+    mycrclib.get_crc_parallel,
+    mycrclib.get_crc_lookup_parallel
 ]
 
 results = []

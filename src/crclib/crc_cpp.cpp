@@ -1,4 +1,5 @@
 #include <array>
+#include <vector>
 #define poly 0x04c11db7
 
 unsigned get_crc(unsigned char *message, int len, unsigned int crc = 0xffffffff) {
@@ -36,6 +37,36 @@ unsigned get_crc_lookup(unsigned char *message, int len, unsigned int crc = 0xff
     for (int i = 0; i < len; i++) {
         unsigned char val = message[i];
         crc = (0xffffff & crc) << 8 ^ table[val ^ static_cast<unsigned char>(crc >> 24)];
+    }
+    return crc;
+}
+
+unsigned get_crc_parallel(unsigned char *message, int len, int splits, unsigned int crc = 0xffffffff) {
+    std::vector<unsigned> tmp;
+    tmp.resize(splits);
+    int step = len / splits;
+
+#pragma omp parallel for num_threads(8)
+    for (int i = 0; i < splits; i++) {
+        tmp[i] = get_crc(&message[step * i], len / splits, 0x00000000);
+    }
+    for (int i = 0; i < splits; i++) {
+        crc = crc ^ tmp[i];
+    }
+    return crc;
+}
+
+unsigned get_crc_lookup_parallel(unsigned char *message, int len, int splits, unsigned int crc = 0xffffffff) {
+    std::vector<unsigned> tmp;
+    tmp.resize(splits);
+    int step = len / splits;
+
+#pragma omp parallel for num_threads(8)
+    for (int i = 0; i < splits; i++) {
+        tmp[i] = get_crc_lookup(&message[step * i], len / splits, 0x00000000);
+    }
+    for (int i = 0; i < splits; i++) {
+        crc = crc ^ tmp[i];
     }
     return crc;
 }

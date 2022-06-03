@@ -73,46 +73,6 @@ def crc32mpeg2_lookup_jited(buf, crc=u32(0xffffffff)):
     return crc
 
 
-def check_all(checker, data):
-    out = []
-    for dg in range(0, STIM_DG_PER_MES):
-        step = dg*STIM_DG_LEN
-        message_part = data[step:step+STIM_DG_LEN]
-        crc = checker(message_part[:CRC_IDX] + DUMMY_BYTES)
-        check = int.from_bytes(bytes(message_part[CRC_IDX:CRC_IDX+4]), 'big')
-        out.append(crc == check)
-    return out
-
-
-def check_all_tupled(checker, data):
-    out = np.empty(STIM_DG_PER_MES, dtype=np.bool_)
-    # crc = np.empty(STIM_DG_PER_MES, dtype=np.uint32)
-    for dg in nb.prange(0, STIM_DG_PER_MES):
-        step = dg*STIM_DG_LEN
-        message_part = data[step:step+STIM_DG_LEN]
-        crc = checker(message_part[:CRC_IDX])
-        crc = checker(np.array([0, ], np.uint32), crc)
-        check = np.sum(message_part[CRC_IDX:CRC_IDX+4]
-                       * 2**np.arange(24, -1, -8))
-        out[dg] = (crc == check)
-    return out
-
-
-@nb.njit(cache=True, parallel=False)
-def check_all_jited(data):
-    out = np.empty(STIM_DG_PER_MES, dtype=np.bool_)
-    # crc = np.empty(STIM_DG_PER_MES, dtype=np.uint32)
-    for dg in nb.prange(0, STIM_DG_PER_MES):
-        step = dg*STIM_DG_LEN
-        message_part = data[step:step+STIM_DG_LEN]
-        crc = crc32mpeg2_lookup_jited(message_part[:CRC_IDX])
-        crc = crc32mpeg2_lookup_jited(np.array([0, ], np.uint32), crc)
-        check = np.sum(message_part[CRC_IDX:CRC_IDX+4]
-                       * 2**np.arange(24, -1, -8))
-        out[dg] = (crc == check)
-    return out
-
-
 def timeit(func, *args, times=100):
     func(*args)
     t0 = time.perf_counter()
