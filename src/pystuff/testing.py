@@ -13,8 +13,8 @@ if True:
     import mycrclib
 
 
-emil = 128000
-n = 320*emil*4
+emil = 128000*2
+n = 256*emil*4
 # n = n - n % 32
 
 # np.random.seed(123)
@@ -35,9 +35,9 @@ args_cuda = [d_message.data.ptr, size, d_table.data.ptr, d_result.data.ptr]
 functions = [
     # [pycrc.crc32,                       norm_args],
     # [pycrc.crc32_lookup,                norm_args],
-    [pycrc.crc32_jit,                   args_norm],
+    # [pycrc.crc32_jit,                   args_norm],
     [pycrc.crc32_lookup_jit,            args_norm],
-    [mycrclib.get_crc,                  args_norm],
+    # [mycrclib.get_crc,                  args_norm],
     [mycrclib.get_crc_lookup,           args_norm],
 
     [pycrc.crc32_parallel,              args_par],
@@ -53,7 +53,6 @@ for (func, args) in functions:
     print(f"{name: <80}: {output: <12}, {time}")
     results.append((name, output, time))
 
-tmp = d_message.reshape(320, -1)
 
 print(pycrc.crc32_jit(message[:emil*4]))
 print(d_result[0])
