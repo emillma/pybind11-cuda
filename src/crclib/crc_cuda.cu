@@ -8,41 +8,51 @@
 namespace py = pybind11;
 
 #define poly 0x04c11db7
+#define threads 320
 
-constexpr __device__ unsigned get_lookup(int i) {
-    unsigned bflip = i << 24;
-    for (int j = 0; j < 8; j++) {
-        if (bflip & 0x80000000) {
-            bflip = (bflip << 1) ^ poly;
-        } else {
-            bflip = bflip << 1;
-        }
-    }
-    return bflip;
+__device__ void add_dword(unsigned &prev_crc, unsigned new_dword,
+                          unsigned *table_0) {
+    unsigned char *bview = reinterpret_cast<unsigned char *>(&new_dword);
+    for (int i = 0; i < 4; i++) {
+        prev_crc = (0xffffff & (prev_crc)) << 8 ^
+                   table_0[bview[i] ^ ((prev_crc) >> 24)];
+    };
 }
+
 // Simple CUDA kernel
-__global__ void crc_cuda(unsigned char *message, int len, unsigned *crc_out) {
-    __shared__ unsigned workmem[1024];
-    __shared__ unsigned table[256];
-    int thread = threadIdx.x;
+__global__ void crc_cuda(unsigned *message, int num_dword, unsigned *table,
+                         unsigned *crc_out) {
+    __shared__ unsigned s_table[256];
 
+    __shared__ unsigned s_crc[threads];
+    __shared__ unsigned s_data[threads * 32];
+
+    unsigned char *s_data_asbytes = reinterpret_cast<unsigned char *>(s_data);
+
+    unsigned thread = threadIdx.x;
+    unsigned windex = thread % 32;
+    unsigned warpstart = thread - windex;
+    unsigned chunksize = num_dword / threads;
+
+    s_crc[thread] = 0;
     if (thread < 256) {
-        table[thread] = get_lookup(thread);
+        s_table[thread] = table[thread];
     }
-    workmem[thread] = 0;
 
-    int stride = 1 + ((len - 1) / blockDim.x);
-    for (int i = 0; i < stride; i++) {
-        int idx = thread * stride + i;
-        if (idx < len) {
-            unsigned char val = message[idx];
-            unsigned crc = workmem[thread];
-            workmem[thread] = (0xffffff & crc) << 8 ^ table[val ^ static_cast<unsigned char>(crc >> 24)];
+    for (int i = 0; i < chunksize; i += 32) {
+        for (int j = 0; j < 32; j++) {
+            s_data[(warpstart + j) * 32 + windex] =
+                message[(warpstart + j) * chunksize + i + windex];
         }
-    }
-    if (thread == 0) {
-        for (int i = 0; i < blockDim.x; i++) {
-            *crc_out ^= workmem[i];
+        __syncthreads();
+
+        for (int j = 0; j < 32 * 4; j++) {
+            s_crc[thread] = s_crc[thread] << 8 ^
+                            s_table[s_data_asbytes[thread * 32 * 4 + j] ^
+                                    s_crc[thread] >> 24];
         }
+
+        __syncthreads();
     }
+    crc_out[thread] = s_crc[thread];
 }

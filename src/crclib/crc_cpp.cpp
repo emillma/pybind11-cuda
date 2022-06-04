@@ -1,6 +1,13 @@
 #include <array>
 #include <vector>
+
 #define poly 0x04c11db7
+#define splits 16
+
+template <unsigned N>
+unsigned char get_byte(unsigned value) {
+    return reinterpret_cast<uint8_t *>(&value)[N];
+}
 
 unsigned get_crc(const unsigned char *message, int len, unsigned int crc = 0) {
     for (int i = 0; i < len; i++) {
@@ -32,11 +39,11 @@ constexpr std::array<unsigned, 256> get_lookup() {
     return table;
 }
 
-unsigned get_crc_lookup(const unsigned char *message, int len, unsigned int crc = 0) {
+unsigned get_crc_lookup(const unsigned char *message, int len,
+                        unsigned int crc = 0) {
     const std::array<unsigned, 256> table = get_lookup();
     for (int i = 0; i < len; i++) {
-        unsigned char val = message[i];
-        crc = (0xffffff & crc) << 8 ^ table[val ^ static_cast<unsigned char>(crc >> 24)];
+        crc = crc << 8 ^ table[message[i] ^ crc>>24];
     }
     return crc;
 }
@@ -56,17 +63,13 @@ constexpr std::array<unsigned, 256 * 4> get_join_table(int dist) {
     return table;
 }
 
-unsigned get_crc_lookup_parallel(const unsigned char *message,
-                                 int len,
-                                 const unsigned *table,
-                                 unsigned int crc = 0) {
-    // const std::array<unsigned, 256 * 4> table = get_join_table(parallel_chunk);
-
-#define splits 8
+unsigned get_crc_lookup_parallel(const unsigned char *message, int len,
+                                 const unsigned *table, unsigned int crc = 0) {
     std::array<unsigned, splits> tmp;
     int step = len / splits;
+    int a = 0;
 
-#pragma omp parallel for num_threads(splits)
+    #pragma omp parallel for num_threads(splits)
     for (int i = 0; i < splits; i++) {
         tmp[i] = get_crc_lookup(&message[step * i], step, 0x00000000);
     }
@@ -78,8 +81,5 @@ unsigned get_crc_lookup_parallel(const unsigned char *message,
         }
         crc = crc_tmp;
     }
-
-    // crc = get_crc_lookup(&message[len - len % parallel_chunk], len % parallel_chunk, crc);
-
     return crc;
 }

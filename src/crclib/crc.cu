@@ -37,26 +37,20 @@ unsigned py_get_crc_lookup_parallel(py::array_t<unsigned char> vec,
 }
 
 // Simple wrapper function to be exposed to Python
-unsigned py_get_crc_cuda(long pycuvec, int len) {
-    unsigned char *d_vec = reinterpret_cast<unsigned char *>(pycuvec);
+unsigned py_get_crc_cuda(long pycuvec, int len, long py_table, long result) {
+    unsigned *d_vec = reinterpret_cast<unsigned *>(pycuvec);
+    unsigned *d_table = reinterpret_cast<unsigned *>(py_table);
+    unsigned *d_res = reinterpret_cast<unsigned *>(result);
     // Run kernel on 1M elements on the GPU
-    int blockSize = 1;
-    int numBlocks = std::min(1024, len);
+    int numBlocks = 1;
+    int blockSize = 320;
 
-    unsigned crc = 0xffffffff;
-    unsigned *h_crc = &crc;
-    unsigned *d_crc;
-    cudaMalloc(&d_crc, sizeof(unsigned));
-    cudaMemcpy(d_crc, h_crc, sizeof(unsigned), cudaMemcpyHostToDevice);
-
-    crc_cuda<<<numBlocks, blockSize>>>(d_vec, len, d_crc);
-    cudaMemcpy(h_crc, d_crc, sizeof(unsigned), cudaMemcpyDeviceToHost);
-    cudaFree(d_crc);
+    crc_cuda<<<numBlocks, blockSize>>>(d_vec, len, d_table, d_res);
     // Wait for GPU to finish before accessing on host
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
 
-    return *h_crc;
+    return 0;
 }
 
 PYBIND11_MODULE(mycrclib, m) {

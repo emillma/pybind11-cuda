@@ -19,7 +19,8 @@
         "mhutchie.git-graph",
         "znck.grammarly",
         "james-yu.latex-workshop",
-        "twxs.cmake"
+        "twxs.cmake",
+        "chiehyu.vscode-astyle" // for #pragma openmp indentation
     ],
     "name": "mycontainer",
     "runArgs": [

@@ -66,6 +66,14 @@
             "console": "integratedTerminal",
         },
         {
+            "name": "Python: Testing",
+            "type": "python",
+            "request": "launch",
+            "preLaunchTask": "make",
+            "program": "${workspaceFolder}/src/pystuff/testing.py",
+            "console": "integratedTerminal",
+        },
+        {
             "name": "Python: Ins",
             "type": "python",
             "request": "launch",
