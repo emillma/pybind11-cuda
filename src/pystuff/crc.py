@@ -73,6 +73,24 @@ def crc32mpeg2_lookup_jited(buf, crc=u32(0)):
     return crc
 
 
+@nb.njit(parallel=True)
+def crc32mpeg2_parallel_jited(buf, table, crc=u32(0)):
+    splits = 8
+    tmp = np.empty(splits, np.uint32)
+    size = buf.shape[0]
+    step = size/splits
+    for i in nb.prange(splits):
+        tmp[i] = crc32mpeg2_lookup_jited(buf[step*i:step*(i+1)])
+
+    for i in range(splits):
+        crc_tmp = tmp[i]
+        for byte in range(4):
+            crc_tmp ^= table[byte, (crc >> (byte * 8) & 0xff)]
+        crc = crc_tmp
+
+    return crc
+
+
 def extend_flip(bit, dist):
     crc = 1 << bit
     flip = crc32mpeg2_lookup_jited(np.zeros(dist, np.uint8), crc)
@@ -89,6 +107,7 @@ def join(crc1, crc2, dist):
     return crcout
 
 
+@nb.njit
 def gen_table(dist):
     table = np.empty((4, 256), np.uint32)
     for i in range(4):

@@ -25,12 +25,15 @@ unsigned py_get_crc_lookup(py::array_t<unsigned char> vec) {
     return get_crc_lookup(ptr, len);
 }
 
-unsigned py_get_crc_lookup_parallel(py::array_t<unsigned char> vec) {
-    py::buffer_info buf = vec.request();
-    int len = buf.shape[0];
-    unsigned char *ptr = static_cast<unsigned char *>(buf.ptr);
-    // return 3;
-    return get_crc_lookup_parallel(ptr, len);
+unsigned py_get_crc_lookup_parallel(py::array_t<unsigned char> vec,
+                                    py::array_t<unsigned> table) {
+    py::buffer_info vec_buf = vec.request();
+    py::buffer_info table_buf = table.request();
+    int len = vec_buf.shape[0];
+    unsigned char *vec_ptr = static_cast<unsigned char *>(vec_buf.ptr);
+    unsigned *table_ptr = static_cast<unsigned *>(table_buf.ptr);
+
+    return get_crc_lookup_parallel(vec_ptr, len, table_ptr);
 }
 
 // Simple wrapper function to be exposed to Python

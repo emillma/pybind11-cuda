@@ -1,7 +1,6 @@
 #include <array>
 #include <vector>
 #define poly 0x04c11db7
-#define parallel_chunk 1024
 
 unsigned get_crc(const unsigned char *message, int len, unsigned int crc = 0) {
     for (int i = 0; i < len; i++) {
@@ -57,24 +56,30 @@ constexpr std::array<unsigned, 256 * 4> get_join_table(int dist) {
     return table;
 }
 
-unsigned get_crc_lookup_parallel(const unsigned char *message, int len, unsigned int crc = 0) {
-    const std::array<unsigned, 256 * 4> table = get_join_table(parallel_chunk);
-    // std::array<unsigned, 256 * 4> table;
-    std::vector<unsigned> tmp;
-    tmp.resize(len / parallel_chunk);
+unsigned get_crc_lookup_parallel(const unsigned char *message,
+                                 int len,
+                                 const unsigned *table,
+                                 unsigned int crc = 0) {
+    // const std::array<unsigned, 256 * 4> table = get_join_table(parallel_chunk);
 
-    // #pragma omp parallel for num_threads(8)
-    for (int i = 0; i < len / parallel_chunk; i++) {
-        tmp[i] = get_crc_lookup(&message[parallel_chunk * i], parallel_chunk, 0x00000000);
+#define splits 8
+    std::array<unsigned, splits> tmp;
+    int step = len / splits;
+
+#pragma omp parallel for num_threads(splits)
+    for (int i = 0; i < splits; i++) {
+        tmp[i] = get_crc_lookup(&message[step * i], step, 0x00000000);
     }
 
-    for (int i = 0; i < len / parallel_chunk; i++) {
+    for (int i = 0; i < splits; i++) {
         unsigned crc_tmp = tmp[i];
-        for (int j = 0; j < 4; j++) {
-            crc_tmp ^= table[j * 256 + (crc >> (j * 8) & 0xff)];
+        for (int byte = 0; byte < 4; byte++) {
+            crc_tmp ^= table[byte * 256 + (crc >> (byte * 8) & 0xff)];
         }
         crc = crc_tmp;
     }
-    crc = get_crc_lookup(&message[len - len % parallel_chunk], len % parallel_chunk, crc);
+
+    // crc = get_crc_lookup(&message[len - len % parallel_chunk], len % parallel_chunk, crc);
+
     return crc;
 }
