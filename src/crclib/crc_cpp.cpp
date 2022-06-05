@@ -63,8 +63,16 @@ constexpr std::array<unsigned, 256 * 4> get_join_table(int dist) {
     return table;
 }
 
+unsigned join_crc_from_lookup(unsigned crc1, unsigned crc2, const unsigned* join_table) {
+    unsigned crc_tmp = crc2;
+    for (int byte = 0; byte<4; byte++) {
+        crc_tmp ^= join_table[byte*256+ (crc1 >> (byte*8) & 0xff)];
+    }
+    return crc_tmp;
+}
+
 unsigned get_crc_lookup_parallel(const unsigned char *message, int len,
-                                 const unsigned *table, unsigned int crc = 0) {
+                                 const unsigned *table, unsigned crc = 0) {
     std::array<unsigned, splits> tmp;
     int step = len / splits;
     int a = 0;
@@ -75,11 +83,7 @@ unsigned get_crc_lookup_parallel(const unsigned char *message, int len,
     }
 
     for (int i = 0; i < splits; i++) {
-        unsigned crc_tmp = tmp[i];
-        for (int byte = 0; byte < 4; byte++) {
-            crc_tmp ^= table[byte * 256 + (crc >> (byte * 8) & 0xff)];
-        }
-        crc = crc_tmp;
+        crc = join_crc_from_lookup(crc, tmp[i], table);
     }
     return crc;
 }

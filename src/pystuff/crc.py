@@ -61,8 +61,16 @@ def crc32_lookup_jit(message: 'np.ndarray[:]', seed: int):
     ...
 
 
+@nb.njit
+def join_crc_from_lookup(crc1, crc2, join_table):
+    crcout = crc2
+    for i in range(4):
+        crcout ^= join_table[i, crc1 >> i*8 & 0xff]
+    return crcout
+
+
 @nb.njit(parallel=True)
-def crc32_parallel(buf, table, crc=u32(0)):
+def crc32_parallel(buf, join_table, crc=u32(0)):
     splits = 16
     tmp = np.empty(splits, np.uint32)
     size = buf.shape[0]
@@ -70,11 +78,18 @@ def crc32_parallel(buf, table, crc=u32(0)):
     for i in nb.prange(splits):
         tmp[i] = crc32_lookup_jit(buf[step*i:step*(i+1)])
     for i in range(splits):
-        crc_tmp = tmp[i]
-        for byte in range(4):
-            crc_tmp ^= table[byte, (crc >> (byte * 8) & 0xff)]
-        crc = crc_tmp
+        crc = join_crc_from_lookup(crc, tmp[i], join_table)
     return crc
+
+
+@nb.njit(parallel=True)
+def get_jointable(dist):
+    table = np.empty((4, 256), np.uint32)
+    for i in nb.prange(4):
+        for j in nb.prange(256):
+            table[i, j] = crc32_lookup_jit(
+                np.zeros(dist, np.uint8), j << i*8)
+    return table
 
 
 def extend_flip(bit, dist):
@@ -88,22 +103,4 @@ def join(crc1, crc2, dist):
     for i in range(32):
         if crc1 >> i & 1:
             crcout = crcout ^ extend_flip(i, dist)
-    return crcout
-
-
-@nb.njit(parallel=True)
-def get_crcjoin_table(dist):
-    table = np.empty((4, 256), np.uint32)
-    for i in nb.prange(4):
-        for j in nb.prange(256):
-            table[i, j] = crc32_lookup_jit(
-                np.zeros(dist, np.uint8), j << i*8)
-    return table
-
-
-def join_lookup(crc1, crc2, dist):
-    crcout = crc2
-    table = get_crcjoin_table(dist)
-    for i in range(4):
-        crcout ^= table[i, crc1 >> i*8 & 0xff]
     return crcout

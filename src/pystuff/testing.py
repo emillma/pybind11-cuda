@@ -6,16 +6,28 @@ import numba as ba
 from numba import cuda
 import crc as pycrc
 from timing import timeit
-
+from pathlib import Path
 if True:
     build_dir = Path(__file__).parents[2].joinpath('build')
     sys.path.append(str(build_dir.joinpath('src/crclib')))
     import mycrclib
 
 
-emil = 128000*2
-n = 256*emil*4
+def get_jointable_cached(n):
+    jointable_dir = Path(__file__).parent.joinpath('jointables')
+    jointable_dir.mkdir(exist_ok=True)
+    fname = jointable_dir.joinpath(f"jointable_{n:08d}.np")
+    if fname.is_file():
+        jointable = np.load(fname)
+    else:
+        jointable = pycrc.get_jointable(n)
+        np.save(fname, jointable)
+    return jointable
+
+
+n = 1024*1024
 # n = n - n % 32
+
 
 # np.random.seed(123)
 message = np.random.randint(0, 256, (n,), np.uint8)
@@ -23,13 +35,15 @@ message = np.random.randint(0, 256, (n,), np.uint8)
 
 args_norm = [message]
 
-parallel_table = pycrc.get_crcjoin_table(n//16)
+parallel_table = get_jointable_cached(n//16)
 args_par = [message, parallel_table]
 
 d_table = cp.asarray(pycrc.get_table_0())
 d_message = cp.asarray(message.view(np.uint32))
 size = d_message.size
 d_result = cp.zeros((10000), np.uint32)
+d_jointables = cp.asarray(np.stack([get_jointable_cached(int((n//256)*2**i))
+                                    for i in range(10)]))
 args_cuda = [d_message.data.ptr, size, d_table.data.ptr, d_result.data.ptr]
 
 functions = [
@@ -43,7 +57,7 @@ functions = [
     [pycrc.crc32_parallel,              args_par],
     [mycrclib.get_crc_lookup_parallel,  args_par],
 
-    [mycrclib.get_crc_cuda,             args_cuda],
+    [mycrclib.get_crc_cuda_fast,             args_cuda],
 ]
 
 results = []
@@ -54,11 +68,10 @@ for (func, args) in functions:
     results.append((name, output, time))
 
 
-print(pycrc.crc32_jit(message[:emil*4]))
-print(d_result[0])
-k = 1
-print(pycrc.crc32_jit(message[k*emil*4:emil*(k+1)*4]))
-print(d_result[k])
-
-
+crc = 0
+for t in range(10):
+    for i in range(256):
+        crc = pycrc.join_crc_from_lookup(
+            crc, d_result[i].get(), d_jointables[t].get())
+    print(crc)
 a = 0

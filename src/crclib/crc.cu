@@ -36,15 +36,16 @@ unsigned py_get_crc_lookup_parallel(py::array_t<unsigned char> vec,
 }
 
 // Simple wrapper function to be exposed to Python
-unsigned py_get_crc_cuda(long pycuvec, int len, long py_table, long result) {
+unsigned py_get_crc_cuda_fast(long pycuvec, int len, long py_table,
+                              long result) {
     unsigned *d_vec = reinterpret_cast<unsigned *>(pycuvec);
     unsigned *d_table = reinterpret_cast<unsigned *>(py_table);
     unsigned *d_res = reinterpret_cast<unsigned *>(result);
     // Run kernel on 1M elements on the GPU
     int numBlocks = 1;
-    int blockSize = 1024;
+    int blockSize = 256;
 
-    crc_cuda<<<numBlocks, blockSize>>>(d_vec, len, d_table, d_res);
+    crc_cuda_fast<<<numBlocks, blockSize>>>(d_vec, len, d_table, d_res);
     // Wait for GPU to finish before accessing on host
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
@@ -56,5 +57,5 @@ PYBIND11_MODULE(mycrclib, m) {
     m.def("get_crc", &py_get_crc);
     m.def("get_crc_lookup", &py_get_crc_lookup);
     m.def("get_crc_lookup_parallel", &py_get_crc_lookup_parallel);
-    m.def("get_crc_cuda", &py_get_crc_cuda);
+    m.def("get_crc_cuda_fast", &py_get_crc_cuda_fast);
 }
