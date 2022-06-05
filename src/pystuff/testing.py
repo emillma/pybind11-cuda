@@ -51,8 +51,8 @@ d_message = cp.asarray(message.view(np.uint32))
 size = d_message.size
 d_result = cp.zeros((10000), np.uint32)
 d_jointables = cp.asarray(np.stack(
-    [get_jointable_cached(int((n//(16*256))*2**i))
-     for i in range(8)]
+    [get_jointable_cached(int((n//(16*1024))*2**i))
+     for i in range(10)]
 ))
 
 args_cuda = [d_message.data.ptr, size,
@@ -70,6 +70,7 @@ functions = [
     [pycrc.crc32_parallel,              args_par],
     [mycrclib.get_crc_lookup_parallel,  args_par],
 
+    [mycrclib.get_crc_cuda,        args_cuda],
     [mycrclib.get_crc_cuda_fast,        args_cuda],
 ]
 

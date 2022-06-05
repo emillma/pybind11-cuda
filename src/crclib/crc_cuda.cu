@@ -28,25 +28,16 @@ __device__ unsigned d_join_crc_from_lookup(unsigned crc1, unsigned crc2,
     return crc_tmp;
 }
 
-// Simple CUDA kernel
-__global__ void crc_cuda1(unsigned *message, int num_dword, unsigned *crc_table,
-                          unsigned *crc_out) {
-    auto byte_view = reinterpret_cast<unsigned char *>(message);
-    unsigned thread = threadIdx.x;
-    unsigned chunksize = 4 * num_dword / blockDim.x;
-
-    unsigned crc = 0;
-    include_data(crc, &byte_view[thread * chunksize], crc_table, chunksize);
-    crc_out[thread] = crc;
-}
 __global__ void crc_cuda(unsigned *message, int num_dword, unsigned *crc_table,
-                         unsigned *crc_out) {
+                         unsigned *join_tables, unsigned *crc_out) {
     __shared__ unsigned s_table[256];
     __shared__ unsigned s_crc[1024];
 
-    auto byte_view = reinterpret_cast<unsigned char *>(message);
+    unsigned *message_part = &message[blockIdx.x * (num_dword / blocks)];
+    auto byte_view = reinterpret_cast<unsigned char *>(message_part);
+
     unsigned thread = threadIdx.x;
-    unsigned chunksize = 4 * num_dword / blockDim.x;
+    unsigned chunksize = 4 * num_dword / (1024 * 16);
 
     s_crc[thread] = 0;
     if (thread < 256) {
@@ -55,7 +46,19 @@ __global__ void crc_cuda(unsigned *message, int num_dword, unsigned *crc_table,
 
     include_data(s_crc[thread], &byte_view[thread * chunksize], s_table,
                  chunksize);
-    crc_out[thread] = s_crc[thread];
+    __syncthreads();
+    for (int pow = 0; pow < 10; pow++) {
+        int step = std::pow(2, pow);
+        if (thread % (2 * step) == 0) {
+            s_crc[thread] =
+                d_join_crc_from_lookup(s_crc[thread], s_crc[thread + step],
+                                       &join_tables[256 * 4 * pow]);
+        }
+        __syncthreads();
+    }
+    if (thread == 0) {
+        crc_out[blockIdx.x] = s_crc[0];
+    }
 }
 
 __global__ void crc_cuda_fast(unsigned *message, int num_dword,
