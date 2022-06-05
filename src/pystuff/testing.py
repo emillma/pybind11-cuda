@@ -17,15 +17,23 @@ def get_jointable_cached(n):
     jointable_dir = Path(__file__).parent.joinpath('jointables')
     jointable_dir.mkdir(exist_ok=True)
     fname = jointable_dir.joinpath(f"jointable_{n:08d}.np")
-    if fname.is_file():
+    if fname.is_file() and False:
         jointable = np.load(fname)
     else:
-        jointable = pycrc.get_jointable(n)
+        if n % 2 == 0 and n > 4:
+            halftable = get_jointable_cached(n//2)
+            jointable = np.zeros_like(halftable)
+            for idx in np.ndindex(halftable.shape):
+                jointable[idx] = pycrc.join_crc_from_lookup(
+                    halftable[idx], 0, halftable)
+        else:
+            jointable = pycrc.get_jointable(n)
+        # jointable = pycrc.get_jointable(n)
         np.save(fname, jointable)
     return jointable
 
 
-n = 1024*1024
+n = 1024*1024*1024
 # n = n - n % 32
 
 
@@ -42,9 +50,14 @@ d_table = cp.asarray(pycrc.get_table_0())
 d_message = cp.asarray(message.view(np.uint32))
 size = d_message.size
 d_result = cp.zeros((10000), np.uint32)
-d_jointables = cp.asarray(np.stack([get_jointable_cached(int((n//256)*2**i))
-                                    for i in range(10)]))
-args_cuda = [d_message.data.ptr, size, d_table.data.ptr, d_result.data.ptr]
+d_jointables = cp.asarray(np.stack(
+    [get_jointable_cached(int((n//(16*256))*2**i))
+     for i in range(8)]
+))
+
+args_cuda = [d_message.data.ptr, size,
+             d_table.data.ptr, d_jointables.data.ptr,
+             d_result.data.ptr, parallel_table]
 
 functions = [
     # [pycrc.crc32,                       norm_args],
@@ -57,7 +70,7 @@ functions = [
     [pycrc.crc32_parallel,              args_par],
     [mycrclib.get_crc_lookup_parallel,  args_par],
 
-    [mycrclib.get_crc_cuda_fast,             args_cuda],
+    [mycrclib.get_crc_cuda_fast,        args_cuda],
 ]
 
 results = []
@@ -66,12 +79,3 @@ for (func, args) in functions:
     name = str(func)
     print(f"{name: <80}: {output: <12}, {time}")
     results.append((name, output, time))
-
-
-crc = 0
-for t in range(10):
-    for i in range(256):
-        crc = pycrc.join_crc_from_lookup(
-            crc, d_result[i].get(), d_jointables[t].get())
-    print(crc)
-a = 0

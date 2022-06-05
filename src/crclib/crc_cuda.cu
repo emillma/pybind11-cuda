@@ -3,12 +3,14 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
+#include <cmath>
 #include <iostream>
 
 namespace py = pybind11;
 
 #define poly 0x04c11db7
 #define threads 256
+#define blocks 16
 
 __device__ void include_data(unsigned &prev_crc, unsigned char *new_bytes,
                              unsigned *crc_table, int num) {
@@ -57,16 +59,19 @@ __global__ void crc_cuda(unsigned *message, int num_dword, unsigned *crc_table,
 }
 
 __global__ void crc_cuda_fast(unsigned *message, int num_dword,
-                              unsigned *crc_table, unsigned *crc_out) {
+                              unsigned *crc_table, unsigned *join_tables,
+                              unsigned *crc_out) {
     __shared__ unsigned s_table[256];
     __shared__ unsigned s_crc[threads];
     __shared__ unsigned s_data[threads * 32];
 
-    auto *s_data_asbytes = reinterpret_cast<unsigned char *>(s_data);
+    unsigned *message_part = &message[blockIdx.x * (num_dword / blocks)];
+    auto *s_data_asbytes = reinterpret_cast<unsigned char *>(&s_data);
+
     unsigned thread = threadIdx.x;
     unsigned windex = thread % 32;
     unsigned warpstart = thread - windex;
-    unsigned chunksize = num_dword / threads;
+    unsigned chunksize = num_dword / (threads * blocks);
 
     s_crc[thread] = 0;
     if (thread < 256) {
@@ -75,10 +80,22 @@ __global__ void crc_cuda_fast(unsigned *message, int num_dword,
     for (int i = 0; i < chunksize; i += 32) {
         for (int j = 0; j < 32; j++) {
             s_data[(warpstart + j) * 32 + windex] =
-                message[(warpstart + j) * chunksize + i + windex];
+                message_part[(warpstart + j) * chunksize + i + windex];
         }
         include_data(s_crc[thread], &s_data_asbytes[thread * 32 * 4], s_table,
                      32 * 4);
     }
-    crc_out[thread] = s_crc[thread];
+    __syncthreads();
+    for (int pow = 0; pow < 8; pow++) {
+        int step = std::pow(2, pow);
+        if (thread % (2 * step) == 0) {
+            s_crc[thread] =
+                d_join_crc_from_lookup(s_crc[thread], s_crc[thread + step],
+                                       &join_tables[256 * 4 * pow]);
+        }
+        __syncthreads();
+    }
+    if (thread == 0) {
+        crc_out[blockIdx.x] = s_crc[0];
+    }
 }

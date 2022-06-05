@@ -14,5 +14,6 @@ inline void gpuAssert(cudaError_t code, const char *file, int line,
 __global__ void crc_cuda(unsigned *message, int num_dword, unsigned *crc_table,
                          unsigned *crc_out);
 
-__global__ void crc_cuda_fast(unsigned *message, int num_dword,
-                              unsigned *crc_table, unsigned *crc_out);
+__global__ void crc_cuda_fast(unsigned *d_message, int num_dword,
+                              unsigned *d_crc_table, unsigned *d_join_tables,
+                              unsigned *d_crc_out);

@@ -36,21 +36,34 @@ unsigned py_get_crc_lookup_parallel(py::array_t<unsigned char> vec,
 }
 
 // Simple wrapper function to be exposed to Python
-unsigned py_get_crc_cuda_fast(long pycuvec, int len, long py_table,
-                              long result) {
+unsigned py_get_crc_cuda_fast(long pycuvec, int len, long crc_table,
+                              long cuda_join_tables, long result,
+                              py::array_t<unsigned> final_table) {
     unsigned *d_vec = reinterpret_cast<unsigned *>(pycuvec);
-    unsigned *d_table = reinterpret_cast<unsigned *>(py_table);
+    unsigned *d_crc_table = reinterpret_cast<unsigned *>(crc_table);
+    unsigned *d_join_tables = reinterpret_cast<unsigned *>(cuda_join_tables);
     unsigned *d_res = reinterpret_cast<unsigned *>(result);
-    // Run kernel on 1M elements on the GPU
-    int numBlocks = 1;
-    int blockSize = 256;
 
-    crc_cuda_fast<<<numBlocks, blockSize>>>(d_vec, len, d_table, d_res);
+    py::buffer_info final_table_buf = final_table.request();
+    unsigned *final_table_ptr = static_cast<unsigned *>(final_table_buf.ptr);
+
+    unsigned res[16];
+    // Run kernel on 1M elements on the GPU
+    int numBlocks = 16;
+    int blockSize = 256;
+    crc_cuda_fast<<<numBlocks, blockSize>>>(d_vec, len, d_crc_table,
+                                            d_join_tables, d_res);
+
+    cudaMemcpy(res, d_res, 16 * sizeof(unsigned), cudaMemcpyDeviceToHost);
+    unsigned crc = 0;
+    for (int i = 0; i < 16; i++) {
+        crc = join_crc_from_lookup(crc, res[i], final_table_ptr);
+    }
     // Wait for GPU to finish before accessing on host
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
 
-    return 0;
+    return crc;
 }
 
 PYBIND11_MODULE(mycrclib, m) {
